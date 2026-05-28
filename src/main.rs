@@ -1,3 +1,6 @@
+mod chess;
+
 fn main() {
-    println!("Hello, world!");
+    let board = chess::Board::new();
+    println!("{}", board);
 }
