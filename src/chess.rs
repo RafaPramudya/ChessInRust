@@ -1,5 +1,10 @@
 use std::fmt::{self, Write};
 
+#[derive(Debug)]
+pub enum Error {
+    InvalidFEN
+}
+
 pub enum PieceType {
     Pawn,
     Knight,
@@ -24,8 +29,8 @@ impl PieceType {
 
 #[derive(Debug, PartialEq, Eq)]
 pub enum PieceColor {
-    White = 0,
-    Black = 8,
+    Black = 0,
+    White = 8,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -36,6 +41,25 @@ pub struct Piece {
 impl Piece {
     pub fn new(piece_type: PieceType, color: PieceColor) -> Self {
         Self{ piece: piece_type as u8 + color as u8 }
+    }
+
+    pub fn new_from_char(piece: char) -> Option<Self> {
+        match piece {
+            'p' => Some(Self::new(PieceType::Pawn, PieceColor::Black)),
+            'n' => Some(Self::new(PieceType::Knight, PieceColor::Black)),
+            'b' => Some(Self::new(PieceType::Bishop, PieceColor::Black)),
+            'r' => Some(Self::new(PieceType::Rook, PieceColor::Black)),
+            'q' => Some(Self::new(PieceType::Queen, PieceColor::Black)),
+            'k' => Some(Self::new(PieceType::King, PieceColor::Black)),
+            'P' => Some(Self::new(PieceType::Pawn, PieceColor::White)),
+            'N' => Some(Self::new(PieceType::Knight, PieceColor::White)),
+            'B' => Some(Self::new(PieceType::Bishop, PieceColor::White)),
+            'R' => Some(Self::new(PieceType::Rook, PieceColor::White)),
+            'Q' => Some(Self::new(PieceType::Queen, PieceColor::White)),
+            'K' => Some(Self::new(PieceType::King, PieceColor::White)),
+
+            _ => None
+        }
     }
 
     pub fn get_type(&self) -> Option<PieceType> {
@@ -52,8 +76,8 @@ impl Piece {
     }
 
     pub fn get_color(&self) -> PieceColor {
-        if self.piece >= 8  { PieceColor::Black }
-        else                { PieceColor::White }
+        if self.piece >= 8  { PieceColor::White }
+        else                { PieceColor::Black }
     } 
 }
 
@@ -64,7 +88,7 @@ impl fmt::Display for Piece {
             .unwrap()
             .char();
 
-        let notation = if self.get_color() == PieceColor::Black {
+        let notation = if self.get_color() == PieceColor::White {
             notation.to_ascii_uppercase()
         } else { notation };
 
@@ -111,11 +135,38 @@ impl fmt::Display for Board {
 }
 
 impl Board {
-    pub fn new() -> Self {
+    pub fn empty() -> Self {
         Self {
             cells: [Cell::Empty; 64]
         }
     }
 
-    pub fn new()
+    pub fn new<T: AsRef<str>>(fen: T) -> Result<Self, Error> {
+        let fen = fen.as_ref();
+        let mut cells = Vec::new();
+        cells.reserve(64);
+
+        let fen = fen.chars();
+
+        for char in fen {
+            match char {
+                '1'..='8' => {
+                    let mut empty = vec![Cell::Empty; char as usize - '0' as usize];
+                    cells.append(&mut empty);
+                }
+                '/' => {
+                    if cells.len() % 8 != 0 { return Err(Error::InvalidFEN) }
+                }
+                'p' | 'n' | 'b' | 'r' | 'q' | 'k' |
+                'P' | 'N' | 'B' | 'R' | 'Q' | 'K'
+                => {cells.push(Cell::Cell(Piece::new_from_char(char).unwrap()));}
+                ' ' => {}
+                _ => {}
+            }
+        }
+
+        Ok(Self {
+            cells: cells.try_into().unwrap()
+        })
+    }
 }
